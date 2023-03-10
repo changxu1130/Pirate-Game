@@ -1,32 +1,13 @@
-import bagel.*;
-import bagel.util.Point;
-import bagel.util.Rectangle;
+import bagel.Image;
 
-public class Block {
-    private final Image BLOCK_IMAGE = new Image("res/block.png"); //image for the block
-    //block's position (final because it doesn't need to be changed, once initialised)
-    public final int POSITION_X;
-    private final int POSITION_Y;
-
+/**
+ * This class handle all the Block relating action. For example, construct a Block
+ */
+public class Block extends Stationary{
     /**
-     * Block constructor
+     * Constructor for block
      */
-    public Block(int x, int y){
-        this.POSITION_X = x;
-        this.POSITION_Y = y;
-    }
-
-    /**
-     * print the block
-     */
-    public void printBlock(){
-        BLOCK_IMAGE.draw(this.POSITION_X, this.POSITION_Y);
-    }
-
-    /**
-     * return a rectangle based on a block's position
-     */
-    public Rectangle createRectangle (){
-        return BLOCK_IMAGE.getBoundingBoxAt(new Point(this.POSITION_X, this.POSITION_Y));
+    public Block(int positionx, int positiony){
+        super(positionx, positiony, new Image("res/block.png"));
     }
 }

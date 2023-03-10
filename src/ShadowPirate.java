@@ -1,48 +1,42 @@
 import bagel.*;
-import java.io.FileReader;
-import java.io.BufferedReader;
-import java.util.ArrayList;
+import bagel.Image;
+import bagel.Window;
 
 /**
- * Skeleton Code for SWEN20003 Project 1, Semester 1, 2022
+ * Skeleton Code for SWEN20003 Project 2, Semester 1, 2022
  *
- * Please filling your name below
+ * Please fill your name below
  * @XuChang
  */
 public class ShadowPirate extends AbstractGame {
     private final static int WINDOW_WIDTH = 1024;
     private final static int WINDOW_HEIGHT = 768;
     private final static String GAME_TITLE = "ShadowPirate";
-    private final Image BACKGROUND_IMAGE = new Image("res/background0.png");
-    private final static String INITIAL_POSITIONS = "res/level0.csv";
+    private final Image BACKGROUND0_IMAGE = new Image("res/background0.png");
+    private final Image BACKGROUND1_IMAGE = new Image("res/background1.png");
 
-    //readcsv file relating constants (specify which column records the data of what)
-    private final static int NAME_COL_NUM = 0;
-    private final static int X_COORDINATE_COL_NUM = 1;
-    private final static int Y_COORDINATE_COL_NUM = 2;
-    private final static String SAILOR = "Sailor";
-    private final static String BLOCK = "Block";
 
-    //messages and its specific locations to print on screen
-    private final static String START_MESSAGE1 = "PRESS SPACE TO START";
-    private final static String START_MESSAGE2 = "USE ARROW KEYS TO FIND LADDER";
-    private final static String WIN_MESSAGE = "CONGRATULATIONS!";
-    private final static String END_OF_GAME_MESSAGE = "GAME OVER!";
-    private final static String DEFAULT_FONT = "res/wheaton.otf";
-    private final static int DEFAULT_MESSAGE_FONT_SIZE = 55;
-    private final static int DEFAULT_Y_COORDINATE_OF_ALL_BOTTOM_LEFT_MESSAGE = 402;
-    private final static int DEFAULT_SPACE_BETWEEN_MESSAGES = 70;
+    //Level relating attributes and constants
+    private final Level0 level0 = new Level0();
+    private final Level1 level1 = new Level1();
 
-    private String gameState = "menu";  //gameState is used to differentiate different stages of the game, playing,
-                                        //lose, win, or end
-    private Sailor sailor; // an instance of the sailor
-    private final ArrayList<Block> blocks = new ArrayList<>(); // array list that stores all the blocks' position
+    //Level relating variable and constants
+    private final static int LEVEL0_START = 0;
+    private final static int LEVEL1_START = 1;
+
+    //Current game state relating variable and constants
+    private final static String MENU = "MENU";
+    private final static String LEVEL_RUNING = "RUNNING";
+    private final static String LEVEL_WIN = "WIN";
+    private final static String LEVEL_LOSE= "LOSE";
+
+
+    //initialise gameState, which is used to differentiate different stages of the game, menu, running, end etc.
+    private final GameState gameState = new GameState(0, MENU);
+
 
     public ShadowPirate() {
         super(WINDOW_WIDTH, WINDOW_HEIGHT, GAME_TITLE);
-
-        //read the csv file to initialise all the blocks and the sailor
-        readcsv(INITIAL_POSITIONS);
     }
 
     /**
@@ -60,44 +54,80 @@ public class ShadowPirate extends AbstractGame {
     @Override
     public void update(Input input) {
 
-        BACKGROUND_IMAGE.draw(Window.getWidth()/2.0, Window.getHeight()/2.0);
 
-        //print out the message to signify the start of the game
-        if(this.gameState.equals("menu")){
-            printMessage(START_MESSAGE1);
-            printMessage(START_MESSAGE2, DEFAULT_Y_COORDINATE_OF_ALL_BOTTOM_LEFT_MESSAGE
-                                                                                + DEFAULT_SPACE_BETWEEN_MESSAGES);
-            if (input.wasPressed(Keys.SPACE)){
-                this.gameState = "playing";
+        //set up the Level0
+        if(this.gameState.getCurrLevel() == LEVEL0_START){
+
+            //print out the message to signify the start of the game
+            if(this.gameState.getCurrState().equals(MENU)){
+                this.level0.level0Menu();
+
+                //update the gamestate to running if space is pressed
+                if (input.wasPressed(Keys.SPACE)){
+                    this.gameState.setCurrState(LEVEL_RUNING);
+                }
+            }
+            if(this.gameState.getCurrState().equals(LEVEL_RUNING)){
+                //update the sailor's position based on the key entered by the user, and draw on the screen
+                BACKGROUND0_IMAGE.draw(Window.getWidth()/2.0, Window.getHeight()/2.0);
+
+                //detects whether the end of the level has reached
+                if(this.level0.level0Running(input).equals(LEVEL_WIN)){
+                    this.gameState.setCurrState(LEVEL_WIN);
+                }
+                if(this.level0.level0Running(input).equals(LEVEL_LOSE)){
+                    this.gameState.setCurrState(LEVEL_LOSE);
+                }
+
+            }
+            //level0Win will return true if the winning message has been displayed for long enough ,
+            // 1. gamestate's currentState should changed to "MENU",
+            // 2. gamestate's currLevel should changed to 1
+            if(this.gameState.getCurrState().equals(LEVEL_WIN)){
+                this.level0.setWinMessageDisplayPeriod(level0.getWinMessageDisplayPeriod() + 1);
+                if(!this.level0.level0Win()){
+                    this.gameState.setCurrLevel(1);
+                    this.gameState.setCurrState(MENU);
+                }
+            }
+
+            //close the window if the end of the level has reached
+            if(this.gameState.getCurrState().equals(LEVEL_LOSE)){
+                this.level0.level0Lose();
             }
         }
 
-        //when the gameState is "playing"
-        else if(this.gameState.equals("playing")){
-            //update the sailor's position based on the key entered by the user, and draw on the screen
-            this.sailor.update(input);
-            this.sailor.draw();
+        //set up the Level1
+        if(this.gameState.getCurrLevel() == LEVEL1_START){
+            //print out the message to signify the start of the game
+            if(this.gameState.getCurrState().equals(MENU)){
+                this.level1.level1Menu();
 
-            //print out all the blocks which have its position defined in the csv file
-            for (Block block : blocks) {
-                block.printBlock();
+                //update the gamestate to running if space is pressed
+                if (input.wasPressed(Keys.SPACE)){
+                    this.gameState.setCurrState(LEVEL_RUNING);
+                }
+            }
+            if(this.gameState.getCurrState().equals(LEVEL_RUNING)){
+                //update the sailor's position based on the key entered by the user, and draw on the screen
+                BACKGROUND1_IMAGE.draw(Window.getWidth()/2.0, Window.getHeight()/2.0);
+
+                //detects whether the end of the level has reached
+                if(this.level1.level1Running(input).equals(LEVEL_WIN)){
+                    this.gameState.setCurrState(LEVEL_WIN);
+                }
+                if(this.level1.level1Running(input).equals(LEVEL_LOSE)){
+                    this.gameState.setCurrState(LEVEL_LOSE);
+                }
             }
 
-            //check the conditions for the end of the game
-            winDetection();
-            loseDetection();
-
-            //if collided, drop health point
-            collision();
-            this.sailor.drawHealthPoint();
-        }
-
-        //if the end of the game is reached, print out the message and exit
-        else if(this.gameState.equals("win")){
-            printMessage(WIN_MESSAGE);
-        }
-        else if(this.gameState.equals("lose")){
-            printMessage(END_OF_GAME_MESSAGE);
+            //close the window if the end of the level has reached
+            if(this.gameState.getCurrState().equals(LEVEL_WIN)){
+                 this.level1.level1Win();
+            }
+            if(this.gameState.getCurrState().equals(LEVEL_LOSE)){
+                this.level1.level1Lose();
+            }
         }
 
         if (input.wasPressed(Keys.ESCAPE)){
@@ -105,87 +135,5 @@ public class ShadowPirate extends AbstractGame {
         }
     }
 
-    /**
-     * win detection, update the gameState once all the conditions to win the game are met
-     */
-    public void winDetection(){
-        if(this.sailor.isWinning()){
-            this.gameState = "win";
-        }
-    }
-
-    /**
-     * lose detection, update the gameState once all the conditions to lose the game are met
-     */
-    public void loseDetection(){
-        if(this.sailor.isLosing()){
-            this.gameState = "lose";
-        }
-    }
-
-    /**
-     * Draw the game instruction messages on screen
-     * Window.getWidth()/2.0 - font.getWidth(message)/2 calculates the x_coordinate required for the message to be
-     * displayed at the centre of the window
-     */
-    public void printMessage(String message){
-        Font font = new Font(DEFAULT_FONT, DEFAULT_MESSAGE_FONT_SIZE);
-        //(Window.getWidth() - font.getWidth(message))/2
-        // is to calculate the x coordinate requires displaying message in the middle of the screen
-        font.drawString(message, (Window.getWidth() - font.getWidth(message))/2,
-                DEFAULT_Y_COORDINATE_OF_ALL_BOTTOM_LEFT_MESSAGE);
-    }
-    public void printMessage(String message, int y_coordinate){
-        Font font = new Font(DEFAULT_FONT, DEFAULT_MESSAGE_FONT_SIZE);
-        //(Window.getWidth() - font.getWidth(message))/2
-        // is to calculate the x coordinate requires displaying message in the middle of the screen
-        font.drawString(message, (Window.getWidth() - font.getWidth(message))/2, y_coordinate);
-    }
-
-    /**
-     * Method used to read file and create objects
-     */
-    public void readcsv(String filename){
-        try (BufferedReader br =
-                     new BufferedReader(new FileReader(filename))) {
-            String text;
-
-            while ((text = br.readLine()) != null) {
-                String cells[] = text.split(",");
-                String name = cells[NAME_COL_NUM];
-                int x_intercept = Integer.parseInt(cells[X_COORDINATE_COL_NUM]);
-                int y_intercept = Integer.parseInt(cells[Y_COORDINATE_COL_NUM]);
-                //System.out.format("%s need to be at %d, %d\n", name, x_intercept, y_intercept);
-
-                //if the position recorded in the csv file if for sailor, create an instance of sailor at that point
-                if(name.equals(SAILOR)){
-                    //create a sailor based on the coordinates in world file
-                    Sailor sailor = new Sailor(x_intercept, y_intercept);
-                    this.sailor = sailor;
-                }
-                //if the position recorded in the csv file if for block, create an instance of block at that point
-                else if (name.equals(BLOCK)){
-                    //store all blocks' position in an array of blocks
-                    blocks.add(new Block(x_intercept, y_intercept));
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * detect collision via rectangle class, if detected drop the health point and bounce back
-     */
-    public void collision(){
-        for (Block block : blocks) {
-            //if there's a collision, health point drops and the sailor bounces back to the position before collision
-            if (sailor.createRectangle().intersects(block.createRectangle())) {
-                sailor.dropHealthPoint();
-                sailor.bounceBack();
-                break;
-            }
-        }
-    }
-
 }
+

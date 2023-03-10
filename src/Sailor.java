@@ -1,184 +1,278 @@
 import bagel.*;
-import bagel.util.Point;
-import bagel.util.Rectangle;
-import java.lang.Math;
+import java.util.ArrayList;
 
-public class Sailor {
 
+/**
+ * This class handle all the Sailor relating action. For example, construct a Sailor, Attack and Damage relating actions
+ */
+public class Sailor extends Character implements Movable, Attackable, Damagable {
     //images for sailor
-    private final static Image SAILOR_IMAGE_L = new Image("res/sailorLeft.png");
-    private final static Image SAILOR_IMAGE_R = new Image("res/sailorRight.png");
+    private final Image SAILOR_IMAGE_L = new Image("res/sailor/sailorLeft.png");
+    private final Image SAILOR_IMAGE_R = new Image("res/sailor/sailorRight.png");
+    private final Image SAILOR_ATTACK_L = new Image("res/sailor/sailorHitLeft.png");
+    private final Image SAILOR_ATTACK_R = new Image("res/sailor/sailorHitRight.png");
     private Image currImage;
+    private Image leftImage;
+    private Image rightImage;
 
-    private int position_x; //x-coordinate of sailor's current position
-    private int position_y; //y-coordinate of sailor's current position
-    private String direction = "right";
-    private final static double SPEED = 20;
+    private Input input;
+    //private String direction = "right";
+    private final static double SPEED = 1.0;
+
+    //Sailor's state relating variables and constants
+    private String sailorState;
+    private final static String IDELE = "IDLE";
+    private final static String ATTACK = "ATTACK";
+    private final static String COOLDOWN = "COOLDOWN";
+    private final int MAX_ATTACK_PERIOD = 60;
+    private final int MIN_COOLDOWN_PERIOD  = 120;
+
+    private int attackPeriod;
+    private int cooldownPeriod;
 
     //health_point relating variables or constants
-    private final static int MAX_HEALTH_POINT = 100;
-    private final static int MIN_HEALTH_POINT = 0;
-    private final static int COLLISION_DAMAGE = 10;
-    private int health_point = 100;
-    private final static int DAMAGE = 25;  // maximum damage they can cause in an attack
-    private final static String LOG = "Block inflicts %d damage points on Sailor. Sailor’s current health: %d/%d";
+    private int maxHealthPoint = 100;
+    private final static int INITIAL_DAMAGE_POINT = 15;
+
+    private int currDamage;
+    private int currHealthPoint = 100;
     //the integer variable required for the log collideDamage, health_point, MAX_HEALTH_POINT
 
     //health point percentage display on the top of the window relating constants
     private final static int HEALTH_PERCENTAGE_FONT_SIZE = 30;
-    private final static int DECIMAL_2_PERCENTAGE = 100;
     private final static int HEALTH_PERCENTAGE_POSITION_X = 10;
     private final static int HEALTH_PERCENTAGE_POSITION_Y = 25;
-    private final static String PERCENTAGE_SYMBOL = "%";
 
-    //colours
-    private final static int HEALTH_POINT_ORANGE = 65;
-    private final static int HEALTH_POINT_RED = 35;
-    private final static DrawOptions ORANGE = new DrawOptions().setBlendColour(0.9, 0.6, 0);
-    private final static DrawOptions RED = new DrawOptions().setBlendColour(1, 0, 0);
-    private final static DrawOptions GREEN = new DrawOptions().setBlendColour(0, 0.8, 0.2);
+    //inventory relating constants
+    private final static int INVENTORY_Y = 40;
+    private final static int INVENTORY_Y_DISTANCE = 43;
 
-    //wining detection relating constants
-    private final static int LADDER_X = 990;
-    private final static int LADDER_Y = 630;
+    private final ArrayList<Image> inventoryIcons = new ArrayList<>();
 
-    //out_of_bound check relating constants
-    private final static int R_BOUND = 0;
-    private final static int L_BOUND = Window.getWidth();
-    private final static int UP_BOUND =670;
-    private final static int BOTTOM_BOUND = 60;
+    public void addIcons(Image icon){
+        this.inventoryIcons.add(icon);
+    }
 
     /**
      * Sailor constructor
      */
-    public Sailor(int x, int y){
-        this.position_x = x;
-        this.position_y = y;
+    public Sailor(int x, int y) {
+        super(x, y, SPEED);
+        this.sailorState = IDELE;
+        this.currImage = SAILOR_IMAGE_R;
+        this.leftImage = SAILOR_IMAGE_L;
+        this.rightImage = SAILOR_IMAGE_R;
+        this.currDamage = INITIAL_DAMAGE_POINT;
     }
 
     /**
-     * Update the position
+     * Attack function aims to handle all the relevant operations regarding sailor attacking pirates
+     * operations include: 1. state detection, 2. display image changes, 3. start counting attack period
      */
-    public void update(Input input) {
+    @Override
+    public void attack(){
+        // make sure the sailor's state is not cooldown, and then change the current image into attack
+        //System.out.println("inside attack");
+        cooldownDetect();
+        if(!sailorState.equals(COOLDOWN)){
+            this.leftImage = SAILOR_ATTACK_L;
+            this.rightImage = SAILOR_ATTACK_R;
+
+            //make sure the image is rendered correctly even up and down key is pressed
+            if(this.getCurrDirection().equals("up") || this.getCurrDirection().equals("down")){
+                if(this.currImage.equals(SAILOR_IMAGE_L)){
+                    this.currImage = SAILOR_ATTACK_L;
+                }
+                if(this.currImage.equals(SAILOR_IMAGE_R)){
+                    this.currImage = SAILOR_ATTACK_R;
+                }
+
+            }
+            setSailorState(ATTACK);
+            this.attackPeriod += 1;
+        }
+    }
+
+    /**
+     * This helper function checks the timer and see if the attack mode has last for 1000 ms
+     * and counts down the cooldown time
+     */
+    public void cooldownDetect(){
+        //if the attackPeriod of the sailor achieve 1000 ms
+        //System.out.println("inside cooldown");
+        if (attackPeriod == MAX_ATTACK_PERIOD){
+            //change the sailorState into COOLDOWN
+            setSailorState(COOLDOWN);
+            //reset the attackPeriod and start the cooldown period
+            attackPeriod = 0;
+            cooldownPeriod += 1;
+        }
+        // if the sailor's cooldown period is larger than 2000 ms switch the state back to idle
+        if (cooldownPeriod > MIN_COOLDOWN_PERIOD){
+            setSailorState(IDELE);
+            cooldownPeriod = 0;
+          // else if the sailor is cooling down, change its image to match the state
+        } else if (cooldownPeriod > 0){
+            this.leftImage = SAILOR_IMAGE_L;
+            this.rightImage = SAILOR_IMAGE_R;
+
+            if(this.getCurrDirection().equals("up") || this.getCurrDirection().equals("down")){
+                if(this.currImage.equals(SAILOR_ATTACK_L)){
+                    this.currImage = SAILOR_IMAGE_L;
+                }
+                if(this.currImage.equals(SAILOR_ATTACK_R)){
+                    this.currImage = SAILOR_IMAGE_R;
+                }
+
+            }
+        }
+    }
+
+    /**
+     * This function is extended from the interface Damagable and drops the sailor's healthpoint based on the damage
+     */
+    @Override
+    public void damage(int damage){
+        //if the pirate is in the attack state, and collide with the sailor, the sailor will have the pirate's full
+        // damage points inflicted to him
+        //drop the healthpoint by the damage entered
+        setCurrHealthPoint(getCurrHealthPoint() - damage);
+    }
+
+    /**
+     * This function updates the position of the sailor based on the input from player
+     */
+    @Override
+    public void move() {
 
         //update sailor's current position based on the key pressed by user
-        if (input.wasPressed(Keys.LEFT)) {
-            this.position_x -= SPEED;
-            this.direction = "left";
+        if (this.input.isDown(Keys.LEFT)) {
+            super.movementUpdate("left");
         }
-        if (input.wasPressed(Keys.RIGHT)) {
-            this.position_x += SPEED;
-            this.direction = "right";
+        else if (this.input.isDown(Keys.RIGHT)) {
+            super.movementUpdate("right");
         }
-        if (input.wasPressed(Keys.UP)) {
-            this.position_y -= SPEED;
-            this.direction = "up";
+        else if (this.input.isDown(Keys.UP)) {
+            super.movementUpdate("up");
         }
-        if (input.wasPressed(Keys.DOWN)) {
-            this.position_y += SPEED;
-            this.direction = "down";
-        }
-        if (input.wasPressed(Keys.ESCAPE)) {
-            Window.close();
+        else if (this.input.isDown(Keys.DOWN)) {
+            super.movementUpdate("down");
         }
 
-        //update the image based on the direction entered
-        if(this.direction.equals("right")){
-            currImage = SAILOR_IMAGE_R;
+        //update the image based on the direction entered remember to
+        if (super.getCurrDirection().equals("right")) {
+            currImage = rightImage;
             //sailorImageR.draw(position_x, position_y);
-        } else if (this.direction.equals("left")){
-            currImage = SAILOR_IMAGE_L;
+        } else if (super.getCurrDirection().equals("left")) {
+            currImage = leftImage;
             //sailorImageL.draw(position_x, position_y);
         }
     }
 
     /**
-     * draw the image of the sailor only when the updated position is valid (within the bound)
+     * This function renders the image of the sailor and the inventories arraylist (for Level1) to the screen
      */
-    public void draw(){
-        if(!isLosing()){
-        currImage.draw(position_x, position_y);
+    @Override
+    public void render() {
+        int positiony = INVENTORY_Y;
+        currImage.drawFromTopLeft(super.getPositionx(), super.getPositiony());
+        for (Image inventoryIcon : inventoryIcons) {
+            inventoryIcon.drawFromTopLeft(0, positiony);
+            positiony += INVENTORY_Y_DISTANCE;
         }
     }
 
     /**
-     * print the health point
+     * This function prints the health point
      */
     public void drawHealthPoint(){
-
-        //format the health_point percentage //HEALTH_PERCENTAGE_FONT_SIZE = 30; DECIMAL_2_PERCENTAGE = 100;
-        Font font = new Font("res/wheaton.otf", HEALTH_PERCENTAGE_FONT_SIZE);
-        Long health_percentage = Math.round((double)this.health_point / MAX_HEALTH_POINT * DECIMAL_2_PERCENTAGE);
-        String health_percent_String =  health_percentage.toString() + PERCENTAGE_SYMBOL;
-
-        //set the colour to orange if health_percent drops below 65%, to red if below 35%, otherwise keep it green
-        if(health_percentage < HEALTH_POINT_ORANGE && health_percentage > HEALTH_POINT_RED){
-            font.drawString(health_percent_String, HEALTH_PERCENTAGE_POSITION_X, HEALTH_PERCENTAGE_POSITION_Y, ORANGE);
-        } else if (health_percentage < HEALTH_POINT_RED){
-            font.drawString(health_percent_String, HEALTH_PERCENTAGE_POSITION_X, HEALTH_PERCENTAGE_POSITION_Y, RED);
-        } else {
-            font.drawString(health_percent_String, HEALTH_PERCENTAGE_POSITION_X, HEALTH_PERCENTAGE_POSITION_Y, GREEN);
-        }
+        super.displayHealthBar(HEALTH_PERCENTAGE_FONT_SIZE, currHealthPoint, maxHealthPoint,
+                                                HEALTH_PERCENTAGE_POSITION_X, HEALTH_PERCENTAGE_POSITION_Y);
     }
 
     /**
-     * return a rectangle based on current sailor's position
+     * Getter for maxHealthPoint
      */
-    public Rectangle createRectangle (){
-        Point position = new Point(position_x, position_y);
-        return currImage.getBoundingBoxAt(position);
+    public int getMaxHealthPoint() {
+        return maxHealthPoint;
     }
 
     /**
-     * if collision detected, then move back to the original position before collision
+     * Setter for maxHealthPoint
      */
-    public void bounceBack(){
-        if(this.direction.equals("right")){
-            this.position_x -= SPEED;
-        } else if (this.direction.equals("left")){
-            this.position_x += SPEED;
-        } else if (this.direction.equals("up")){
-            this.position_y += SPEED;
-        } else if (this.direction.equals("down")){
-            this.position_y -= SPEED;
-        }
+    public void setMaxHealthPoint(int maxHealthPoint) {
+        this.maxHealthPoint = maxHealthPoint;
     }
 
     /**
-     * health point drops by 10
+     * Getter for sailor's current healthpoint
      */
-    public void dropHealthPoint(){
-        this.health_point -= COLLISION_DAMAGE;
-        //System.out.println("drop health point now");
-        printLog();
+    public int getCurrHealthPoint() {
+        return currHealthPoint;
     }
 
     /**
-     * print the log every time the block inflicts damage on the sailor
+     * Setter for sailor's current healthpoint
      */
-    public void printLog(){
-        System.out.println(String.format(LOG ,COLLISION_DAMAGE, health_point, MAX_HEALTH_POINT));
+    public void setCurrHealthPoint(int currHealthPoint) {
+        this.currHealthPoint = currHealthPoint;
     }
 
     /**
-     * win detection: when the sailor reaches the destination, ladder
+     * Getter for current sailorState
      */
-    public boolean isWinning(){
-        return this.position_x >= LADDER_X && this.position_y >= LADDER_Y;
+    public String getSailorState() {
+        return sailorState;
     }
 
     /**
-     * lose detection: either the health point has dropped to 0 or the sailor is out of bound
+     * Setter for current sailorState
      */
-    public boolean isLosing(){
-        //check whether the health_point is above 0
-        if(health_point == MIN_HEALTH_POINT){
-            return true;
-        }
-        //check whether the sailor is out of bound
-        if(this.position_y < BOTTOM_BOUND || this.position_y > UP_BOUND){
-            return true;
-        }
-        return this.position_x < R_BOUND || this.position_x > L_BOUND;
+    public void setSailorState(String sailorState) {
+        this.sailorState = sailorState;
     }
+
+    /**
+     * Getter for current cooldownPeriod
+     */
+    public int getCooldownPeriod() {
+        return cooldownPeriod;
+    }
+
+    /**
+     * Setter for current cooldownPeriod
+     */
+    public void setCooldownPeriod(int cooldownPeriod) {
+        this.cooldownPeriod = cooldownPeriod;
+    }
+
+    /**
+     * Getter for current damage
+     */
+    public int getCurrDamage() {
+        return currDamage;
+    }
+
+    /**
+     * Setter for current damage
+     */
+    public void setCurrDamage(int currDamage) {
+        this.currDamage = currDamage;
+    }
+
+    /**
+     * Setter for the input
+     */
+    public void setInput(Input input) {
+        this.input = input;
+    }
+
+    /**
+     * Getter for currImage
+     */
+    public Image getCurrImage() {
+        return currImage;
+    }
+
+
 }

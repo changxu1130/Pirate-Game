@@ -1,4 +1,4 @@
-Sailor,30,660
+Sailor,40,600
 Block,30,500
 Block,75,500
 Block,207,550
@@ -48,3 +48,9 @@ Block,900,180
 Block,960,340
 Block,1000,530
 Block,960,530
+Pirate,203,410
+Pirate,800,600
+Pirate,560,250
+Pirate,900,250
+TopLeft,0,20
+BottomRight,1000,640
